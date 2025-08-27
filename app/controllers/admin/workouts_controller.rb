@@ -14,8 +14,9 @@ module Admin
     end
 
     # GET /admin/workouts/:id
+
     def show
-      render json: @workout, status: :ok
+      render json: workout_json(@workout)
     end
 
     # POST /admin/workouts
@@ -24,19 +25,35 @@ module Admin
     #                "instructions": "..." } }
     def create
       w = Workout.new(workout_params)
+      attach_image!(w)
       if w.save
-        render json: w, status: :created
+        render json: workout_json(w), status: :created
       else
         render json: { errors: w.errors.full_messages }, status: :unprocessable_entity
       end
     end
 
+
     # PATCH/PUT /admin/workouts/:id
+
     def update
-      if @workout.update(workout_params)
-        render json: @workout, status: :ok
+      if params[:image].present?
+        # Image-only update
+        @workout.image.attach(params[:image])
+        if @workout.valid?
+          render json: { message: "Image uploaded successfully", workout: workout_json(@workout) }
+        else
+          render json: { error: @workout.errors.full_messages.join(", ") }, status: :unprocessable_entity
+        end
       else
-        render json: { errors: @workout.errors.full_messages }, status: :unprocessable_entity
+        # Regular workout attributes update
+        @workout.assign_attributes(workout_params)
+        attach_image!(@workout)
+        if @workout.save
+          render json: workout_json(@workout), status: :ok
+        else
+          render json: { errors: @workout.errors.full_messages }, status: :unprocessable_entity
+        end
       end
     end
 
@@ -46,19 +63,39 @@ module Admin
       head :no_content
     end
 
+    def showuser 
+      user = User.all
+      render json: user, status: :ok
+    end 
+
+
     private
 
-    def set_workout
-      @workout = Workout.find(params[:id])
-    end
+    def set_workout; @workout = Workout.find(params[:id]); end
+
 
     def workout_params
-      params.require(:workout).permit(
-        :name, :body_part, :difficulty, :duration,
-        :equipment_required, :image_url, :instructions
-      )
+      if params[:workout].present?
+        params.require(:workout).permit(:name, :body_part, :difficulty, :duration, :equipment_required, :instructions)
+      else
+        # Allow direct parameters when not nested under :workout
+        params.permit(:name, :body_part, :difficulty, :duration, :equipment_required, :instructions)
+      end
     end
 
+    def attach_image!(record)
+      return unless params[:image].present?
+      record.image.attach(params[:image])   # expects multipart/form-data file field "image"
+    end
+
+    def workout_json(w)
+      {
+        id: w.id, name: w.name, body_part: w.body_part, difficulty: w.difficulty,
+        duration: w.duration, equipment_required: w.equipment_required, instructions: w.instructions,
+        image_url: (w.image.attached? ? rails_blob_url(w.image, only_path: false, disposition: "inline", expires_in: 10.minutes) : nil)
+      }
+    end
+    
     def require_admin!
       return if @current_user&.admin?
       render json: { error: "Forbidden" }, status: :forbidden

@@ -12,7 +12,7 @@ Rails.application.routes.draw do
   # Profile routes
   resource :profile, only: [:show, :update]
   
-  # Workout routes
+  # Workout routes (regular users can only view, not update)
   resources :workouts, only: [:index, :show]
   
   # Favorites routes (note: controller is actually named 'favourites')
@@ -40,6 +40,7 @@ Rails.application.routes.draw do
     get "workouts/create"
     get "workouts/update"
     get "workouts/destroy"
+    get "workouts/showuser"
     resources :workouts
   end
 end

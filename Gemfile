@@ -54,3 +54,5 @@ group :development, :test do
   # Generate Entity Relationship Diagrams
   gem "rails-erd", require: false
 end
+
+gem "image_processing", "~> 1.14"

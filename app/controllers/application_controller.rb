@@ -1,4 +1,6 @@
 class ApplicationController < ActionController::API
+  include Rails.application.routes.url_helpers
+
     rescue_from JWT::ExpiredSignature, with: :unauthorized!
     rescue_from JWT::DecodeError, with: :unauthorized!
   
